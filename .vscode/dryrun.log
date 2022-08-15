@@ -1,0 +1,13 @@
+objc[697]: Class AppleTypeCRetimerRestoreInfoHelper is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b458) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a204f8). One of the two will be used. Which one is undefined.
+
+objc[697]: Class AppleTypeCRetimerFirmwareAggregateRequestCreator is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b4a8) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a20548). One of the two will be used. Which one is undefined.
+objc[697]: Class AppleTypeCRetimerFirmwareRequestCreator is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b4f8) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a20598). One of the two will be used. Which one is undefined.
+objc[697]: Class ATCRTRestoreInfoFTABFile is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b548) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a205e8). One of the two will be used. Which one is undefined.
+objc[697]: Class AppleTypeCRetimerFirmwareCopier is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b598) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a20638). One of the two will be used. Which one is undefined.
+
+objc[697]: Class ATCRTRestoreInfoFTABSubfile is implemented in both /usr/lib/libauthinstall.dylib (0x1fd61b5e8) and /Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/MobileDevice (0x108a20688). One of the two will be used. Which one is undefined.
+
+make: Entering directory `/Users/zowie/Desktop/projects/quiz_party_api'
+docker-compose up --abort-on-container-exit
+make: Leaving directory `/Users/zowie/Desktop/projects/quiz_party_api'
+ 

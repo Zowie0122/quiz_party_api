@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: quiz_party_api
+    build:
+      context: ./
+    ports:
+      - "${API_EXPOSED_HTTP_PORT}:${API_INTERNAL_HTTP_PORT}"
+    volumes:
+      - .:/app
+      - exclude:/app/node_modules/
+volumes:
+  exclude:
