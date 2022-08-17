@@ -17,15 +17,13 @@ restart:
 up: # create-network
 	docker-compose up -d
 
-# Rebuild and run the container, detach stdout
-rebuild: # create-network
-	docker-compose up -d --force-recreate --build
-
 # Stop and remove containers
 down:
 	docker-compose down
 
-reset: down rebuild
+# Rebuild and run the container, detach stdout
+rebuild: # create-network
+	docker-compose up -d --force-recreate --build
 
 # Interactive terminal inside of docker
 ash-app:
