@@ -14,13 +14,25 @@ const {
   getGameCodeByPlayerId,
   removePlayer,
 } = require('./utils/game');
+
+const {
+  isValidString,
+  isValidUUID,
+  isValidArrayOfStrings,
+  isExplicitBool,
+  isInteger,
+} = require('./utils/validatioin');
+
 const quizs = require('./db/dammyData');
 const { getRandomNumber } = require('./utils/number');
-const { time } = require('console');
 
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+  cors: {
+    origin: 'http://localhost:8080', // the frontend port
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -28,19 +40,17 @@ app.use(express.urlencoded({ extended: true }));
 
 const onGoingGames = {};
 
-// make a new game
+// make a new game room
 app.post('/new', async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name) throw new Error('The master must provide a display name.');
-
-    // generate a new game id
-    const gameCode = uuidv4();
+    if (!isValidString(name))
+      throw new Error('The master must provide a valid display name.');
 
     // register and initialize a new game with master info
     // generate master identifier
+    const gameCode = uuidv4();
     const mid = uuidv4();
-
     onGoingGames[gameCode] = getNewGame(mid, name);
 
     res.status(200).json({ gameCode, mid });
@@ -50,20 +60,30 @@ app.post('/new', async (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`${socket.id} connection started`);
+  console.log(`${socket.id} connected`);
 
   // when master / players join a game
-  socket.on('join', ({ gameCode, name, mid }, callback) => {
-    const game = onGoingGames[gameCode];
-    if (!game) {
+  socket.on('join', ({ gameCode, mid, name }) => {
+    if (
+      !isValidUUID(gameCode) ||
+      !(!mid || (mid && isValidUUID(mid))) ||
+      !(!name || (name && isValidString(name)))
+    ) {
+      io.to(socket.id).emit('error', {
+        msg: 'Please provide valid info to join the game.',
+      });
       return;
-      // return callback({
-      //   status: 404,
-      //   error: "Game not found."
-      // })
     }
 
-    // identify if it is master or player
+    const game = onGoingGames[gameCode];
+    if (!game) {
+      io.to(socket.id).emit('error', {
+        msg: 'Game not found or already finished.',
+      });
+      return;
+    }
+
+    // identify master or player
     if (mid && mid === game.master?.mid) {
       game.master.id = socket.id;
     } else {
@@ -73,49 +93,74 @@ io.on('connection', (socket) => {
 
     socket.join(gameCode);
 
-    // notify the player's own id within the game room
-    io.to(socket.id).emit('idNotification', socket.id);
-
     io.to(gameCode).emit('updatedGame', {
       game: formatGameInfo(game),
     });
   });
 
   // master generate a new quiz
-  socket.on('new quiz', ({ gameCode, mid, isRandom, quiz }) => {
-    const game = onGoingGames[gameCode];
-    // only master could raise a new quiz
-    if (!game || !mid || mid !== game.master.mid) {
-      // show error
+  socket.on('start quiz', ({ gameCode, mid, quiz, timeLimit = 20 }) => {
+    if (
+      !isValidUUID(gameCode) ||
+      !isValidUUID(mid) ||
+      !(
+        quiz &&
+        isValidString(quiz.question) &&
+        isValidArrayOfStrings(quiz.options, 2) &&
+        isInteger(quiz.bingo)
+      ) ||
+      !isInteger(timeLimit)
+    ) {
+      io.to(socket.id).emit('error', {
+        msg: 'Please provide valid info to make new quiz.',
+      });
       return;
     }
 
-    if (game.showBingo) game.showBingo = false
-
-    if (isRandom) {
-      // TODO: get the random quiz from mongo
-      game.quiz = quizs[getRandomNumber(quizs.length)];
-    } else if (!quiz) {
-      return
-    } else {
-      game.quiz = quiz
+    let game = onGoingGames[gameCode];
+    if (!game) {
+      io.to(socket.id).emit('error', {
+        msg: 'Game not found or already finished.',
+      });
+      return;
     }
+
+    if (mid !== game.master.mid) {
+      io.to(socket.id).emit('error', {
+        msg: 'Only master could raise a quiz.',
+      });
+      return;
+    }
+
+    if (game.isOngoing) {
+      io.to(socket.id).emit('error', {
+        msg: "Can't raise a new game while a quiz is still ongoing.",
+      });
+      return;
+    }
+
+    if (game.showBingo) game.showBingo = false;
+
+    game.quiz = quiz;
+    game.isOngoing = true;
 
     io.to(gameCode).emit('updatedGame', {
       game: formatGameInfo(game),
     });
 
-    // TODO: make it available for master to decide
-    let timeleft = 15;
+    let timeleft = timeLimit;
     let downloadTimer = setInterval(function () {
+      io.to(gameCode).emit('counter', {
+        timeleft,
+      });
+
       timeleft -= 1;
-      if (timeleft <= 0) {
+      if (timeleft <= -1) {
         clearInterval(downloadTimer);
       }
-      io.to(gameCode).emit('counter', {
-        timeleft
-      });
-      if (timeleft === 0) {
+
+      if (timeleft === -1) {
+        game.isOngoing = false;
         game.showBingo = true;
         calWinCounts(game);
 
@@ -124,49 +169,79 @@ io.on('connection', (socket) => {
         });
       }
     }, 1000);
+  });
 
+  socket.on('get random quiz', ({ }, callback) => {
+    callback({
+      quiz: quizs[getRandomNumber(quizs.length)],
+    });
   });
 
   // a player selects an answer
   socket.on('select', ({ gameCode, answer }) => {
-    const game = onGoingGames[gameCode];
-
-    // player can't select while the current quiz is under revealed
-    if (!game || game.showBingo) {
-      // error
-      return;
-    }
-    game.players.find((player) => player.id === socket.id).answer = answer;
-  });
-
-  // master / timer forces to show bingo
-  socket.on('show bingo', ({ gameCode, mid }) => {
-    const game = onGoingGames[gameCode];
-
-    // only master could clear / reset game
-    if (!game || game.showBingo || !mid || mid !== game.master.mid) {
-      // show error
+    if (!isValidUUID(gameCode) || !isInteger(answer)) {
+      io.to(socket.id).emit('error', {
+        msg: 'Please provide valid info for answer.',
+      });
       return;
     }
 
-    game.showBingo = true;
-    calWinCounts(game);
+    const game = onGoingGames[gameCode];
+    if (!game) {
+      io.to(socket.id).emit('error', {
+        msg: 'Game not found or already finished.',
+      });
+      return;
+    }
 
-    io.to(gameCode).emit('updatedGame', {
-      game: formatGameInfo(game, false),
-    });
+    // player can't select while the current quiz bingo is under revealed
+    if (game.showBingo) {
+      io.to(socket.id).emit('error', {
+        msg: "Can't select after the bingo is revealed.",
+      });
+      return;
+    }
+
+    const player = game.players.find((player) => player.id === socket.id);
+    player.answer = answer;
   });
 
   // master clear quiz / reset game
-  socket.on('reset', ({ gameCode, mid, resetWinCounts }) => {
-    const game = onGoingGames[gameCode];
-
-    // only master could clear / reset game
-    if (!game || !mid || mid !== game.master.mid) {
-      // show error
+  socket.on('reset', ({ gameCode, mid, resetWinCounts = false }) => {
+    if (
+      !isValidUUID(gameCode) ||
+      !isValidUUID(mid) ||
+      !isExplicitBool(resetWinCounts)
+    ) {
+      io.to(socket.id).emit('error', {
+        msg: 'Please provide valid info to reset a game.',
+      });
       return;
     }
 
+    const game = onGoingGames[gameCode];
+    if (!game) {
+      io.to(socket.id).emit('error', {
+        msg: 'Game not found or already finished.',
+      });
+      return;
+    }
+
+    if (mid !== game.master.mid) {
+      io.to(socket.id).emit('error', {
+        msg: 'Only master could reset a quiz or game.',
+      });
+      return;
+    }
+
+    if (game.isOngoing) {
+      io.to(socket.id).emit('error', {
+        msg: "Can't reset a quiz or game while a quiz is still ongoing.",
+      });
+      return;
+    }
+
+    // check explict value
     if (resetWinCounts) {
       resetGame(game);
     } else {
@@ -186,18 +261,18 @@ io.on('connection', (socket) => {
       socket.leave(gameCode);
       io.to(gameCode).emit('gameIsOver', {
         code: 444,
-        message: 'Master left, the game is over',
+        message: 'Master left, the game is over.',
       });
 
       // remove from memory
       delete onGoingGames[gameCode];
-      console.log(onGoingGames);
       return;
     }
 
     gameCode = getGameCodeByPlayerId(onGoingGames, socket.id);
     if (gameCode) {
       removePlayer(onGoingGames[gameCode], socket.id);
+
       socket.leave(gameCode);
       io.to(gameCode).emit('updatedGame', {
         game: formatGameInfo(onGoingGames[gameCode]),
