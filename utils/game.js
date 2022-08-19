@@ -9,12 +9,13 @@ const GAME_INITIAL = {
 
   quiz: {
     question: null,
-    options: [],
+    options: ['', ''],
     bingo: null,
   },
 
   players: [],
 
+  isOngoing: false,
   showBingo: false,
 };
 
@@ -37,7 +38,6 @@ const getNewGame = (mid, masterName) => {
 };
 
 const formatGameInfo = (game) => {
-  console.log(game)
   const _game = deepClone(game);
   if (!_game.showBingo) {
     delete _game.quiz.bingo;
@@ -49,8 +49,8 @@ const formatGameInfo = (game) => {
 
 const calWinCounts = (game) => {
   game.players.forEach((player) => {
-    if ((player.answer = game.quiz.bingo)) {
-      player.winCounts++;
+    if (player.answer === game.quiz.bingo) {
+      player.winCounts += 1;
     }
   });
 };
