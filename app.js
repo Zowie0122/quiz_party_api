@@ -259,9 +259,9 @@ io.on('connection', (socket) => {
 
     if (gameCode) {
       socket.leave(gameCode);
-      io.to(gameCode).emit('gameIsOver', {
+      io.to(gameCode).emit('master left', {
         code: 444,
-        message: 'Master left, the game is over.',
+        msg: 'Master left, the game is over.',
       });
 
       // remove from memory

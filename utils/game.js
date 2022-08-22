@@ -72,7 +72,6 @@ const resetGame = (game) => {
 
 const getGameCodeByMasterId = (games, id) => {
   for (const gameCode in games) {
-    console.log('gameMasterId', games[gameCode].master.id, 'masterId', id);
     if (games[gameCode].master.id === id) {
       return gameCode;
     }
