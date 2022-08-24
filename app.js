@@ -41,6 +41,11 @@ app.use(express.urlencoded({ extended: true }));
 const onGoingGames = {};
 
 // make a new game room
+app.get('/healthcheck', async (req, res) => {
+  res.status(200).json({ msg: 'Welcome to Quiz Party API!' });
+});
+
+// make a new game room
 app.post('/new', async (req, res) => {
   try {
     const { name } = req.body;
