@@ -23,14 +23,14 @@ const {
   isInteger,
 } = require('./utils/validatioin');
 
-const quizs = require('./db/dammyData');
+const quizs = require('./quizs');
 const { getRandomNumber } = require('./utils/number');
 
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
   cors: {
-    origin: 'http://localhost:8080', // the frontend port
+    origin: process.env.FRONTEND_URL,
   },
 });
 
@@ -171,7 +171,7 @@ io.on('connection', (socket) => {
     }, 1000);
   });
 
-  socket.on('get random quiz', ({ }, callback) => {
+  socket.on('get random quiz', ({}, callback) => {
     callback({
       quiz: quizs[getRandomNumber(quizs.length)],
     });

@@ -1,6 +1,3 @@
-include .env
-export $(shell sed 's/=.*//' .env)
-
 # Start the container, keep stdout attached
 start:
 	docker-compose up --abort-on-container-exit
