@@ -27,29 +27,28 @@ A quiz app that allows multi game rooms and multi players within a game room at 
 
 1. Copy the environment variable to `.env` from `.env.example` by
 
-```
-cat .env.example >> .env
-```
+   ```
+   cat .env.example >> .env
+   ```
 
 2. Please install [Docker](https://www.docker.com/products/docker-desktop/) if you hasn't, don't worry, it is still free 😆 !
 
 3. Make sure your Docker is up and running and host machine and docker environment are all available for port: `7000`. Then run
 
-```
-make restart
-```
+   ```
+   make restart
+   ```
+   You can access the API on your host machine via post `7000`. Check if the app is up and running by
 
-You can access the API on your host machine via post `7000`. Check if the app is up and running by
-
-```
-curl -X GET http://localhost:7000/healthcheck
-```
+   ```
+   curl -X GET http://localhost:7000/healthcheck
+   ```
 
 6. To stop the container, run
-
-```
-make down
-```
+   
+   ```
+   make down
+   ```
 
 For more come in handy commands, please refer to [Makefile](./Makefile)
 
